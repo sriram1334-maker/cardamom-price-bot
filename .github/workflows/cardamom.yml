@@ -1,5 +1,4 @@
 name: Daily Cardamom Rate
-
 on:
   workflow_dispatch:
 
