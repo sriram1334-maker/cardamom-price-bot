@@ -12,34 +12,26 @@ CHAT_ID = os.environ["CHAT_ID"]
 7
 message = """
 8
-🟢 Cardamom Daily Price Update
+Hello from Cardamom Bot
 9
- 
-10
-6 mm : ₹1800/kg
-11
-7 mm : ₹2100/kg
-12
-8 mm : ₹2500/kg
-13
 """
-14
+10
  
-15
+11
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-16
+12
  
-17
+13
 requests.post(
-18
+14
 url,
-19
+15
 data={
-20
+16
 "chat_id": CHAT_ID,
-21
+17
 "text": message
-22
+18
 }
-23
+19
 )
