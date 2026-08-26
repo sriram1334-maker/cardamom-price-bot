@@ -26,7 +26,7 @@ message = """
 14
  
 15
-url = f"https://api.telegram.org/bot8224279466:AAGAvT1bhik88B6qMdvq4oaOxG8mQsQsK08/sendMessage"
+url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 16
  
 17
