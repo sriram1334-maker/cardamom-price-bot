@@ -9,23 +9,28 @@ SPICES_URL = "https://www.indianspices.com/marketing/price/domestic/daily-price.
 
 try:
 
-    # CARDAMOM AUCTION
+    # =====================
+    # CARDAMOM AUCTION DATA
+    # =====================
+
     tables = pd.read_html(SPICES_URL)
+
     table = tables[1]
 
     row1 = table.iloc[2]
     row2 = table.iloc[3]
 
-    avg_price = float(str(row1[8]).replace(",", ""))
+    # =====================
+    # WEATHER DATA
+    # VELLIMALA
+    # =====================
 
-    # WEATHER - VELLIMALA
     weather_url = (
         "https://api.open-meteo.com/v1/forecast"
         "?latitude=9.85"
         "&longitude=77.15"
         "&current=temperature_2m,relative_humidity_2m,rain"
-        "&daily=temperature_2m_max,temperature_2m_min,"
-        "precipitation_sum,sunrise,sunset"
+        "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
         "&forecast_days=5"
         "&timezone=Asia/Kolkata"
     )
@@ -39,142 +44,150 @@ try:
     humidity = current["relative_humidity_2m"]
     rain = current["rain"]
 
-    sunrise = daily["sunrise"][0].split("T")[1]
-    sunset = daily["sunset"][0].split("T")[1]
+    max_temp = daily["temperature_2m_max"][0]
+    min_temp = daily["temperature_2m_min"][0]
+    daily_rain = daily["precipitation_sum"][0]
 
-    # DISEASE RISK
-    if humidity >= 90:
-        disease_risk = "🔴 HIGH"
-    elif humidity >= 75:
-        disease_risk = "🟠 MODERATE"
-    else:
-        disease_risk = "🟢 LOW"
+    # =====================
+    # 4 DAY FORECAST
+    # =====================
 
-    # FARM ADVISORY
-    today_rain = daily["precipitation_sum"][0]
-
-    if today_rain > 15:
-        advice = "⚠️ Avoid spraying and fertilizer application."
-    elif today_rain > 5:
-        advice = "☔ Monitor rainfall before field operations."
-    else:
-        advice = "✅ Suitable for spraying and plantation work."
-
-    # FORECAST
     forecast_text = ""
-    rain_days = []
+    rain_alerts = []
+
+    best_spray_day = None
+    lowest_rain = 999
 
     for i in range(1, 5):
 
         date = daily["time"][i]
+
         max_t = daily["temperature_2m_max"][i]
         min_t = daily["temperature_2m_min"][i]
-        rainfall = daily["precipitation_sum"][i]
+        rain_f = daily["precipitation_sum"][i]
 
-        forecast_text += (
-            f"\n📅 {date}"
-            f"\n🌡️ {min_t}°C - {max_t}°C"
-            f"\n🌧️ {rainfall} mm\n"
-        )
+        short_date = date[8:10] + "-" + date[5:7]
 
-        if rainfall > 0:
-            rain_days.append(
-                f"🌧️ {date} ({rainfall} mm)"
+        forecast_text += f"""
+📅 {short_date}
+🌡️ {min_t}°C - {max_t}°C
+🌧️ {rain_f} mm
+
+"""
+
+        if rain_f > 0:
+            rain_alerts.append(
+                f"🌧️ {short_date} ({rain_f} mm)"
             )
 
-    if rain_days:
-        rain_summary = "\n".join(rain_days)
+        if rain_f < lowest_rain:
+            lowest_rain = rain_f
+            best_spray_day = short_date
+
+    if rain_alerts:
+        rain_summary = "\n".join(rain_alerts)
     else:
         rain_summary = "✅ No rainfall expected."
 
-    # PRICE ALERT
-    if avg_price >= 3000:
-        price_alert = f"""
-🎯 PRICE ALERT
+    heavy_rain_days = []
 
-✅ Above ₹3000 Target
+    for i in range(1, 5):
 
-Current Average:
-₹{avg_price:,.0f}/Kg
-"""
+        rainfall = daily["precipitation_sum"][i]
+
+        if rainfall >= 15:
+
+            heavy_rain_days.append(
+                daily["time"][i][8:10]
+                + "-"
+                + daily["time"][i][5:7]
+            )
+
+    if heavy_rain_days:
+        heavy_rain_text = "\n".join(heavy_rain_days)
     else:
-        price_alert = f"""
-🎯 PRICE ALERT
+        heavy_rain_text = "None"
 
-Current Average:
-₹{avg_price:,.0f}/Kg
-"""
-
+    # =====================
     # FINAL MESSAGE
+    # =====================
+
     message = f"""
 🌿 CardoEla Daily Intelligence Report
 
 📅 {row1[3]}
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━
 
 💹 CARDAMOM MARKET
 
 🏢 Auction Centre 1
-📦 Arrived : {row1[4]} Kg
-✅ Sold : {row1[5]} Kg
-💰 Avg : ₹{row1[8]}/Kg
-🚀 Max : ₹{row1[6]}/Kg
 
-━━━━━━━━━━━━━━
+📦 Arrived Qty : {row1[4]} Kg
+✅ Sold Qty : {row1[5]} Kg
+
+💰 Avg Price : ₹{row1[8]}/Kg
+🚀 Max Price : ₹{row1[6]}/Kg
+
+━━━━━━━━━━━━━━━━
 
 🏢 Auction Centre 2
-📦 Arrived : {row2[4]} Kg
-✅ Sold : {row2[5]} Kg
-💰 Avg : ₹{row2[8]}/Kg
-🚀 Max : ₹{row2[6]}/Kg
 
-━━━━━━━━━━━━━━
+📦 Arrived Qty : {row2[4]} Kg
+✅ Sold Qty : {row2[5]} Kg
+
+💰 Avg Price : ₹{row2[8]}/Kg
+🚀 Max Price : ₹{row2[6]}/Kg
+
+━━━━━━━━━━━━━━━━
 
 🌦️ VELLIMALA WEATHER
 📍 Udumbanchola, Idukki
 
-🌡️ Temperature : {temp}°C
+🌡️ Current Temp : {temp}°C
 💧 Humidity : {humidity}%
 ☔ Current Rain : {rain} mm
 
-🌅 Sunrise : {sunrise}
-🌇 Sunset : {sunset}
+Today's Forecast
 
-━━━━━━━━━━━━━━
+🔺 Max : {max_temp}°C
+🔻 Min : {min_temp}°C
+🌧️ Rain : {daily_rain} mm
 
-🚜 FARM ADVISORY
+━━━━━━━━━━━━━━━━
 
-{advice}
-
-━━━━━━━━━━━━━━
-
-🦠 DISEASE RISK
-
-Capsule Rot Risk:
-{disease_risk}
-
-━━━━━━━━━━━━━━
-
-📆 NEXT 4 DAYS
+📆 4-DAY FORECAST
 
 {forecast_text}
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━
 
-☔ RAIN EXPECTED ON
+☔ RAIN ALERTS
 
 {rain_summary}
 
-━━━━━━━━━━━━━━
+⚠️ Heavy Rain Expected On:
 
-{price_alert}
+{heavy_rain_text}
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━
+
+🚜 SPRAY ADVISORY
+
+✅ Best Spray Day:
+
+{best_spray_day}
+
+Reason:
+• Lowest rainfall forecast
+• Better field accessibility
+• Suitable field conditions
+
+━━━━━━━━━━━━━━━━
 
 📍 Sources
 • Spices Board India
-• Open-Meteo
+• Open-Meteo Weather
 """
 
 except Exception as e:
@@ -182,15 +195,20 @@ except Exception as e:
     message = f"""
 ⚠️ CardoEla Alert
 
-Failed to generate report
+Failed to generate today's report.
 
+Error:
 {str(e)}
 """
 
+telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
 requests.post(
-    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+    telegram_url,
     data={
         "chat_id": CHAT_ID,
         "text": message
     }
 )
+
+print("Message sent successfully")
