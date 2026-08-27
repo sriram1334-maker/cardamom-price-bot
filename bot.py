@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 import os
+from datetime import date
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -19,6 +20,87 @@ try:
 
     row1 = table.iloc[2]
     row2 = table.iloc[3]
+    avg_price = float(str(row1[8]).replace(",", ""))
+
+    history_df = pd.read_csv("price_history.csv")
+
+today = str(date.today())
+
+if not (history_df["date"] == today).any():
+
+    history_df.loc[len(history_df)] = [
+        today,
+        avg_price
+    ]
+
+    history_df.to_csv(
+        "price_history.csv",
+        index=False
+    )
+    price_trend_text = "Not enough historical data."
+
+market_outlook = "🟡 Stable"
+
+if len(history_df) >= 2:
+
+    today_price = history_df.iloc[-1]["avg_price"]
+    yesterday_price = history_df.iloc[-2]["avg_price"]
+
+    change = today_price - yesterday_price
+
+    percent = (
+        change / yesterday_price
+    ) * 100
+
+    if change > 0:
+        market_outlook = "🟢 Bullish"
+
+    elif change < 0:
+        market_outlook = "🔴 Bearish"
+
+    price_trend_text = f"""
+Yesterday : ₹{yesterday_price:,.0f}/Kg
+Today : ₹{today_price:,.0f}/Kg
+Change : ₹{change:+,.0f} ({percent:+.2f}%)
+"""
+    weekly_text = ""
+
+last7 = history_df.tail(7)
+
+if len(last7) > 1:
+
+    for _, row in last7.iterrows():
+
+        weekly_text += (
+            f"{row['date']} : "
+            f"₹{row['avg_price']:,.0f}\n"
+        )
+
+    weekly_gain = (
+        last7.iloc[-1]["avg_price"]
+        - last7.iloc[0]["avg_price"]
+    )
+
+else:
+
+    weekly_gain = 0
+    if avg_price >= 3000:
+
+    price_alert = f"""
+✅ Above ₹3,000/kg Target
+
+Current Avg:
+₹{avg_price:,.0f}/Kg
+"""
+
+else:
+
+    price_alert = f"""
+⚠️ Below ₹3,000/kg Target
+
+Current Avg:
+₹{avg_price:,.0f}/Kg
+"""
 
     # =====================
     # WEATHER DATA
@@ -47,6 +129,44 @@ try:
     max_temp = daily["temperature_2m_max"][0]
     min_temp = daily["temperature_2m_min"][0]
     daily_rain = daily["precipitation_sum"][0]
+    if humidity >= 90 and daily_rain >= 10:
+
+    disease_risk = "🔴 HIGH"
+
+    disease_reason = """
+• High humidity
+• Continuous rainfall
+• Increased capsule rot risk
+"""
+
+elif humidity >= 80:
+
+    disease_risk = "🟠 MODERATE"
+
+    disease_reason = """
+• Elevated humidity
+• Monitor plantation regularly
+"""
+
+else:
+
+    disease_risk = "🟢 LOW"
+
+    disease_reason = """
+• Weather relatively favourable
+"""
+    pred_low = int(avg_price * 0.99)
+pred_high = int(avg_price * 1.02)
+
+tomorrow_outlook = f"""
+Expected Avg Price:
+
+₹{pred_low:,} - ₹{pred_high:,}
+
+Market Sentiment:
+
+{market_outlook}
+"""
 
     # =====================
     # 4 DAY FORECAST
@@ -184,6 +304,45 @@ Reason:
 • Suitable field conditions
 
 ━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━
+
+📈 PRICE TREND
+
+{price_trend_text}
+
+Market Outlook:
+{market_outlook}
+
+━━━━━━━━━━━━━━━━
+
+🦠 DISEASE RISK
+
+Capsule Rot Risk:
+{disease_risk}
+
+Reasons:
+{disease_reason}
+
+━━━━━━━━━━━━━━━━
+
+🎯 PRICE ALERT
+
+{price_alert}
+
+━━━━━━━━━━━━━━━━
+
+📊 WEEKLY TREND
+
+{weekly_text}
+
+Weekly Gain:
+₹{weekly_gain:,.0f}
+
+━━━━━━━━━━━━━━━━
+
+🔮 TOMORROW OUTLOOK
+
+{tomorrow_outlook}
 
 📍 Sources
 • Spices Board India
