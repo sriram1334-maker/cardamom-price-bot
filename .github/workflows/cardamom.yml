@@ -1,5 +1,8 @@
 name: Daily Cardamom Rate
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '30 13 * * *'
@@ -10,17 +13,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install packages
-        run: pip install requests pandas lxml html5lib
+        run: |
+          pip install requests pandas lxml html5lib
 
       - name: Run Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python bot.py
+
+      - name: Commit price history
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          git add price_history.csv
+
+          git diff --staged --quiet || git commit -m "Update price history"
+
+          git push
