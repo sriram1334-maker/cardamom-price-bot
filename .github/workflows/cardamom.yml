@@ -3,7 +3,6 @@ name: Daily Cardamom Rate
 on:
   schedule:
     - cron: '30 13 * * *'
-    - cron: '45 13 * * *'
   workflow_dispatch:
 
 jobs:
