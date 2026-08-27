@@ -9,7 +9,9 @@ SPICES_URL = "https://www.indianspices.com/marketing/price/domestic/daily-price.
 
 try:
 
+    # =====================
     # CARDAMOM AUCTION DATA
+    # =====================
     tables = pd.read_html(SPICES_URL)
 
     table = tables[1]
@@ -17,13 +19,17 @@ try:
     row1 = table.iloc[2]
     row2 = table.iloc[3]
 
-    # WEATHER DATA - VELLIMALA, UDUMBANCHOLA
+    # =====================
+    # WEATHER DATA
+    # VELLIMALA, UDUMBANCHOLA
+    # =====================
     weather_url = (
         "https://api.open-meteo.com/v1/forecast"
         "?latitude=9.85"
         "&longitude=77.15"
         "&current=temperature_2m,relative_humidity_2m,rain"
         "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
+        "&forecast_days=5"
         "&timezone=Asia/Kolkata"
     )
 
@@ -40,7 +46,9 @@ try:
     min_temp = daily["temperature_2m_min"][0]
     daily_rain = daily["precipitation_sum"][0]
 
+    # =====================
     # FARMING ADVISORY
+    # =====================
     if daily_rain > 15:
         advice = "⚠️ Heavy rainfall expected. Avoid spraying and fertilizer application."
     elif daily_rain > 5:
@@ -48,7 +56,39 @@ try:
     else:
         advice = "✅ Suitable weather for spraying, fertilizer application and harvesting."
 
-    # FINAL MESSAGE
+    # =====================
+    # 4 DAY FORECAST
+    # =====================
+    forecast = ""
+    rain_alerts = []
+
+    for i in range(1, 5):
+
+        date = daily["time"][i]
+        max_t = daily["temperature_2m_max"][i]
+        min_t = daily["temperature_2m_min"][i]
+        rain_f = daily["precipitation_sum"][i]
+
+        forecast += f"""
+📅 {date}
+🌡️ {min_t}°C - {max_t}°C
+🌧️ Rain: {rain_f} mm
+
+"""
+
+        if rain_f > 0:
+            rain_alerts.append(
+                f"🌧️ {date} - {rain_f} mm"
+            )
+
+    if rain_alerts:
+        rain_summary = "\n".join(rain_alerts)
+    else:
+        rain_summary = "✅ No rainfall expected during the next 4 days."
+
+    # =====================
+    # TELEGRAM MESSAGE
+    # =====================
     message = f"""
 🌿 CardoEla Daily Market Report
 
@@ -80,12 +120,12 @@ try:
 📍 Udumbanchola, Idukki
 
 🌡️ Current Temp : {temp}°C
-🔺 Max Temp : {max_temp}°C
-🔻 Min Temp : {min_temp}°C
+🔺 Today's Max : {max_temp}°C
+🔻 Today's Min : {min_temp}°C
 
 💧 Humidity : {humidity}%
 ☔ Current Rain : {rain} mm
-🌧️ Daily Rain : {daily_rain} mm
+🌧️ Today's Rain : {daily_rain} mm
 
 ━━━━━━━━━━━━━━
 
@@ -95,7 +135,19 @@ try:
 
 ━━━━━━━━━━━━━━
 
-📍 Source:
+📆 Next 4 Days Forecast
+
+{forecast}
+
+━━━━━━━━━━━━━━
+
+☔ Rain Expected On
+
+{rain_summary}
+
+━━━━━━━━━━━━━━
+
+📍 Sources
 • Spices Board India
 • Open-Meteo Weather
 """
