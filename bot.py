@@ -20,82 +20,102 @@ try:
 
     row1 = table.iloc[2]
     row2 = table.iloc[3]
+
     avg_price = float(str(row1[8]).replace(",", ""))
 
-    history_df = pd.read_csv("price_history.csv")
+    # =====================
+    # PRICE HISTORY
+    # =====================
 
-today = str(date.today())
+    try:
+        history_df = pd.read_csv("price_history.csv")
+    except:
+        history_df = pd.DataFrame(
+            columns=["date", "avg_price"]
+        )
 
-if not (history_df["date"] == today).any():
+    today = str(date.today())
 
-    history_df.loc[len(history_df)] = [
-        today,
-        avg_price
-    ]
+    if not (history_df["date"] == today).any():
 
-    history_df.to_csv(
-        "price_history.csv",
-        index=False
-    )
+        history_df.loc[len(history_df)] = [
+            today,
+            avg_price
+        ]
+
+        history_df.to_csv(
+            "price_history.csv",
+            index=False
+        )
+
+    # =====================
+    # PRICE TREND
+    # =====================
+
     price_trend_text = "Not enough historical data."
+    market_outlook = "🟡 Stable"
 
-market_outlook = "🟡 Stable"
+    if len(history_df) >= 2:
 
-if len(history_df) >= 2:
+        today_price = history_df.iloc[-1]["avg_price"]
+        yesterday_price = history_df.iloc[-2]["avg_price"]
 
-    today_price = history_df.iloc[-1]["avg_price"]
-    yesterday_price = history_df.iloc[-2]["avg_price"]
+        change = today_price - yesterday_price
 
-    change = today_price - yesterday_price
+        percent = (
+            change / yesterday_price
+        ) * 100
 
-    percent = (
-        change / yesterday_price
-    ) * 100
+        if change > 0:
+            market_outlook = "🟢 Bullish"
+        elif change < 0:
+            market_outlook = "🔴 Bearish"
 
-    if change > 0:
-        market_outlook = "🟢 Bullish"
-
-    elif change < 0:
-        market_outlook = "🔴 Bearish"
-
-    price_trend_text = f"""
+        price_trend_text = f"""
 Yesterday : ₹{yesterday_price:,.0f}/Kg
 Today : ₹{today_price:,.0f}/Kg
 Change : ₹{change:+,.0f} ({percent:+.2f}%)
 """
+
+    # =====================
+    # WEEKLY TREND
+    # =====================
+
     weekly_text = ""
+    weekly_gain = 0
 
-last7 = history_df.tail(7)
+    last7 = history_df.tail(7)
 
-if len(last7) > 1:
+    if len(last7) > 1:
 
-    for _, row in last7.iterrows():
+        for _, row in last7.iterrows():
 
-        weekly_text += (
-            f"{row['date']} : "
-            f"₹{row['avg_price']:,.0f}\n"
+            weekly_text += (
+                f"{row['date']} : "
+                f"₹{row['avg_price']:,.0f}\n"
+            )
+
+        weekly_gain = (
+            last7.iloc[-1]["avg_price"]
+            - last7.iloc[0]["avg_price"]
         )
 
-    weekly_gain = (
-        last7.iloc[-1]["avg_price"]
-        - last7.iloc[0]["avg_price"]
-    )
+    # =====================
+    # PRICE ALERT
+    # =====================
 
-else:
-
-    weekly_gain = 0
     if avg_price >= 3000:
 
-    price_alert = f"""
+        price_alert = f"""
 ✅ Above ₹3,000/kg Target
 
 Current Avg:
 ₹{avg_price:,.0f}/Kg
 """
 
-else:
+    else:
 
-    price_alert = f"""
+        price_alert = f"""
 ⚠️ Below ₹3,000/kg Target
 
 Current Avg:
@@ -103,8 +123,7 @@ Current Avg:
 """
 
     # =====================
-    # WEATHER DATA
-    # VELLIMALA
+    # WEATHER
     # =====================
 
     weather_url = (
@@ -129,36 +148,46 @@ Current Avg:
     max_temp = daily["temperature_2m_max"][0]
     min_temp = daily["temperature_2m_min"][0]
     daily_rain = daily["precipitation_sum"][0]
+
+    # =====================
+    # DISEASE RISK
+    # =====================
+
     if humidity >= 90 and daily_rain >= 10:
 
-    disease_risk = "🔴 HIGH"
+        disease_risk = "🔴 HIGH"
 
-    disease_reason = """
+        disease_reason = """
 • High humidity
 • Continuous rainfall
 • Increased capsule rot risk
 """
 
-elif humidity >= 80:
+    elif humidity >= 80:
 
-    disease_risk = "🟠 MODERATE"
+        disease_risk = "🟠 MODERATE"
 
-    disease_reason = """
+        disease_reason = """
 • Elevated humidity
 • Monitor plantation regularly
 """
 
-else:
+    else:
 
-    disease_risk = "🟢 LOW"
+        disease_risk = "🟢 LOW"
 
-    disease_reason = """
+        disease_reason = """
 • Weather relatively favourable
 """
-    pred_low = int(avg_price * 0.99)
-pred_high = int(avg_price * 1.02)
 
-tomorrow_outlook = f"""
+    # =====================
+    # TOMORROW OUTLOOK
+    # =====================
+
+    pred_low = int(avg_price * 0.99)
+    pred_high = int(avg_price * 1.02)
+
+    tomorrow_outlook = f"""
 Expected Avg Price:
 
 ₹{pred_low:,} - ₹{pred_high:,}
@@ -169,7 +198,7 @@ Market Sentiment:
 """
 
     # =====================
-    # 4 DAY FORECAST
+    # FORECAST
     # =====================
 
     forecast_text = ""
@@ -180,13 +209,17 @@ Market Sentiment:
 
     for i in range(1, 5):
 
-        date = daily["time"][i]
+        weather_date = daily["time"][i]
 
         max_t = daily["temperature_2m_max"][i]
         min_t = daily["temperature_2m_min"][i]
         rain_f = daily["precipitation_sum"][i]
 
-        short_date = date[8:10] + "-" + date[5:7]
+        short_date = (
+            weather_date[8:10]
+            + "-"
+            + weather_date[5:7]
+        )
 
         forecast_text += f"""
 📅 {short_date}
@@ -204,10 +237,11 @@ Market Sentiment:
             lowest_rain = rain_f
             best_spray_day = short_date
 
-    if rain_alerts:
-        rain_summary = "\n".join(rain_alerts)
-    else:
-        rain_summary = "✅ No rainfall expected."
+    rain_summary = (
+        "\n".join(rain_alerts)
+        if rain_alerts
+        else "✅ No rainfall expected."
+    )
 
     heavy_rain_days = []
 
@@ -223,13 +257,14 @@ Market Sentiment:
                 + daily["time"][i][5:7]
             )
 
-    if heavy_rain_days:
-        heavy_rain_text = "\n".join(heavy_rain_days)
-    else:
-        heavy_rain_text = "None"
+    heavy_rain_text = (
+        "\n".join(heavy_rain_days)
+        if heavy_rain_days
+        else "None"
+    )
 
     # =====================
-    # FINAL MESSAGE
+    # MESSAGE
     # =====================
 
     message = f"""
@@ -242,20 +277,16 @@ Market Sentiment:
 💹 CARDAMOM MARKET
 
 🏢 Auction Centre 1
-
 📦 Arrived Qty : {row1[4]} Kg
 ✅ Sold Qty : {row1[5]} Kg
-
 💰 Avg Price : ₹{row1[8]}/Kg
 🚀 Max Price : ₹{row1[6]}/Kg
 
 ━━━━━━━━━━━━━━━━
 
 🏢 Auction Centre 2
-
 📦 Arrived Qty : {row2[4]} Kg
 ✅ Sold Qty : {row2[5]} Kg
-
 💰 Avg Price : ₹{row2[8]}/Kg
 🚀 Max Price : ₹{row2[6]}/Kg
 
@@ -304,7 +335,6 @@ Reason:
 • Suitable field conditions
 
 ━━━━━━━━━━━━━━━━
-━━━━━━━━━━━━━━━━
 
 📈 PRICE TREND
 
@@ -343,6 +373,8 @@ Weekly Gain:
 🔮 TOMORROW OUTLOOK
 
 {tomorrow_outlook}
+
+━━━━━━━━━━━━━━━━
 
 📍 Sources
 • Spices Board India
