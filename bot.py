@@ -18,99 +18,77 @@ try:
     tables = pd.read_html(SPICES_URL)
 
     if len(tables) == 0:
-        raise Exception("No tables found on Spices Board website")
+        raise Exception("No tables found")
 
-    table = None
+    auction_rows = []
 
-    for t in tables:
-        if len(t) >= 2 and len(t.columns) >= 9:
-            table = t
+    for tbl in tables:
+
+        tbl = tbl.dropna(how="all").reset_index(drop=True)
+
+        for i in range(len(tbl)):
+
+            row = tbl.iloc[i]
+
+            for col in range(len(row)):
+
+                try:
+
+                    value = str(row.iloc[col])
+
+                    value = value.replace(",", "").replace("₹", "").strip()
+
+                    price = float(value)
+
+                    if price > 500:
+                        auction_rows.append(row)
+                        break
+
+                except:
+                    pass
+
+            if len(auction_rows) >= 2:
+                break
+
+        if len(auction_rows) >= 2:
             break
 
-    if table is None:
-        raise Exception("Valid auction table not found")
-
-    table = table.dropna(how="all").reset_index(drop=True)
-
-    print(f"Tables Found: {len(tables)}")
-    print(f"Rows Found: {len(table)}")
-
-    if len(table) < 2:
+    if len(auction_rows) < 2:
         raise Exception(
-            f"Auction data not available. Rows found: {len(table)}"
+            "Could not find auction rows in Spices Board table"
         )
 
-    row1 = table.iloc[0]
-    row2 = table.iloc[1]
+    row1 = auction_rows[0]
+    row2 = auction_rows[1]
 
-    auction_date = row1.iloc[3]
+    print("Auction Row 1")
+    print(row1)
 
-    avg_price = float(
-        str(row1.iloc[8])
-        .replace(",", "")
-        .replace("₹", "")
-        .strip()
-    )
+    print("Auction Row 2")
+    print(row2)
 
-    # =====================
-    # PRICE HISTORY
-    # =====================
+    # Adjust if website structure changes
+    avg_price = None
 
-    try:
-        history_df = pd.read_csv("price_history.csv")
-    except:
-        history_df = pd.DataFrame(
-            columns=["date", "avg_price"]
-        )
+    for value in row1:
 
-    today = str(date.today())
+        try:
 
-    if not history_df.empty:
-        history_df["avg_price"] = pd.to_numeric(
-            history_df["avg_price"],
-            errors="coerce"
-        )
+            temp = str(value).replace(",", "").replace("₹", "").strip()
 
-    if not (history_df["date"] == today).any():
+            number = float(temp)
 
-        history_df.loc[len(history_df)] = [
-            today,
-            avg_price
-        ]
+            if number > 500:
+                avg_price = number
+                break
 
-        history_df.to_csv(
-            "price_history.csv",
-            index=False
-        )
+        except:
+            continue
 
-    # =====================
-    # PRICE TREND
-    # =====================
+    if avg_price is None:
+        raise Exception("Average price not found")
 
-    price_trend_text = "Not enough historical data."
-    market_outlook = "🟡 Stable"
-
-    if len(history_df) >= 2:
-
-        today_price = history_df.iloc[-1]["avg_price"]
-        yesterday_price = history_df.iloc[-2]["avg_price"]
-
-        change = today_price - yesterday_price
-
-        percent = (
-            change / yesterday_price
-        ) * 100
-
-        if change > 0:
-            market_outlook = "🟢 Bullish"
-        elif change < 0:
-            market_outlook = "🔴 Bearish"
-
-        price_trend_text = f"""
-Yesterday : ₹{yesterday_price:,.0f}/Kg
-Today : ₹{today_price:,.0f}/Kg
-Change : ₹{change:+,.0f} ({percent:+.2f}%)
-"""
+    auction_date = str(date.today())
 
     # =====================
     # WEATHER
@@ -129,15 +107,45 @@ Change : ₹{change:+,.0f} ({percent:+.2f}%)
     weather = requests.get(weather_url).json()
 
     current = weather["current"]
-    daily = weather["daily"]
 
     temp = current["temperature_2m"]
     humidity = current["relative_humidity_2m"]
     rain = current["rain"]
 
-    max_temp = daily["temperature_2m_max"][0]
-    min_temp = daily["temperature_2m_min"][0]
-    daily_rain = daily["precipitation_sum"][0]
+    # =====================
+    # PRICE HISTORY
+    # =====================
+
+    try:
+
+        history_df = pd.read_csv("price_history.csv")
+
+    except:
+
+        history_df = pd.DataFrame(
+            columns=["date", "avg_price"]
+        )
+
+    today = str(date.today())
+
+    if not history_df.empty:
+
+        history_df["avg_price"] = pd.to_numeric(
+            history_df["avg_price"],
+            errors="coerce"
+        )
+
+    if not (history_df["date"] == today).any():
+
+        history_df.loc[len(history_df)] = [
+            today,
+            avg_price
+        ]
+
+        history_df.to_csv(
+            "price_history.csv",
+            index=False
+        )
 
     # =====================
     # MESSAGE
@@ -153,47 +161,34 @@ Change : ₹{change:+,.0f} ({percent:+.2f}%)
 💹 CARDAMOM MARKET
 
 🏢 Auction Centre 1
-📦 Arrived Qty : {row1.iloc[4]}
-✅ Sold Qty : {row1.iloc[5]}
-💰 Avg Price : ₹{row1.iloc[8]}/Kg
-🚀 Max Price : ₹{row1.iloc[6]}/Kg
+
+{row1.to_string()}
 
 ━━━━━━━━━━━━━━━━
 
 🏢 Auction Centre 2
-📦 Arrived Qty : {row2.iloc[4]}
-✅ Sold Qty : {row2.iloc[5]}
-💰 Avg Price : ₹{row2.iloc[8]}/Kg
-🚀 Max Price : ₹{row2.iloc[6]}/Kg
+
+{row2.to_string()}
 
 ━━━━━━━━━━━━━━━━
 
-🌦️ VELLIMALA WEATHER
+💰 Average Price
 
-🌡️ Current Temp : {temp}°C
+₹{avg_price:,.0f}/Kg
+
+━━━━━━━━━━━━━━━━
+
+🌦️ WEATHER
+
+🌡️ Temperature : {temp}°C
 💧 Humidity : {humidity}%
-☔ Current Rain : {rain} mm
-
-Today's Forecast
-
-🔺 Max : {max_temp}°C
-🔻 Min : {min_temp}°C
-🌧️ Rain : {daily_rain} mm
-
-━━━━━━━━━━━━━━━━
-
-📈 PRICE TREND
-
-{price_trend_text}
-
-Market Outlook:
-{market_outlook}
+☔ Rain : {rain} mm
 
 ━━━━━━━━━━━━━━━━
 
 📍 Sources
 • Spices Board India
-• Open-Meteo Weather
+• Open-Meteo
 """
 
 except Exception as e:
@@ -211,10 +206,6 @@ Error Type:
 Error:
 {str(e)}
 """
-
-# =====================
-# TELEGRAM
-# =====================
 
 telegram_url = (
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
