@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 import os
+import traceback
 from datetime import date
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -16,12 +17,40 @@ try:
 
     tables = pd.read_html(SPICES_URL)
 
-    table = tables[1]
+    if len(tables) == 0:
+        raise Exception("No tables found on Spices Board website")
 
-    row1 = table.iloc[2]
-    row2 = table.iloc[3]
+    table = None
 
-    avg_price = float(str(row1[8]).replace(",", ""))
+    for t in tables:
+        if len(t) >= 2 and len(t.columns) >= 9:
+            table = t
+            break
+
+    if table is None:
+        raise Exception("Valid auction table not found")
+
+    table = table.dropna(how="all").reset_index(drop=True)
+
+    print(f"Tables Found: {len(tables)}")
+    print(f"Rows Found: {len(table)}")
+
+    if len(table) < 2:
+        raise Exception(
+            f"Auction data not available. Rows found: {len(table)}"
+        )
+
+    row1 = table.iloc[0]
+    row2 = table.iloc[1]
+
+    auction_date = row1.iloc[3]
+
+    avg_price = float(
+        str(row1.iloc[8])
+        .replace(",", "")
+        .replace("₹", "")
+        .strip()
+    )
 
     # =====================
     # PRICE HISTORY
@@ -35,6 +64,12 @@ try:
         )
 
     today = str(date.today())
+
+    if not history_df.empty:
+        history_df["avg_price"] = pd.to_numeric(
+            history_df["avg_price"],
+            errors="coerce"
+        )
 
     if not (history_df["date"] == today).any():
 
@@ -78,51 +113,6 @@ Change : ₹{change:+,.0f} ({percent:+.2f}%)
 """
 
     # =====================
-    # WEEKLY TREND
-    # =====================
-
-    weekly_text = ""
-    weekly_gain = 0
-
-    last7 = history_df.tail(7)
-
-    if len(last7) > 1:
-
-        for _, row in last7.iterrows():
-
-            weekly_text += (
-                f"{row['date']} : "
-                f"₹{row['avg_price']:,.0f}\n"
-            )
-
-        weekly_gain = (
-            last7.iloc[-1]["avg_price"]
-            - last7.iloc[0]["avg_price"]
-        )
-
-    # =====================
-    # PRICE ALERT
-    # =====================
-
-    if avg_price >= 3000:
-
-        price_alert = f"""
-✅ Above ₹3,000/kg Target
-
-Current Avg:
-₹{avg_price:,.0f}/Kg
-"""
-
-    else:
-
-        price_alert = f"""
-⚠️ Below ₹3,000/kg Target
-
-Current Avg:
-₹{avg_price:,.0f}/Kg
-"""
-
-    # =====================
     # WEATHER
     # =====================
 
@@ -150,150 +140,35 @@ Current Avg:
     daily_rain = daily["precipitation_sum"][0]
 
     # =====================
-    # DISEASE RISK
-    # =====================
-
-    if humidity >= 90 and daily_rain >= 10:
-
-        disease_risk = "🔴 HIGH"
-
-        disease_reason = """
-• High humidity
-• Continuous rainfall
-• Increased capsule rot risk
-"""
-
-    elif humidity >= 80:
-
-        disease_risk = "🟠 MODERATE"
-
-        disease_reason = """
-• Elevated humidity
-• Monitor plantation regularly
-"""
-
-    else:
-
-        disease_risk = "🟢 LOW"
-
-        disease_reason = """
-• Weather relatively favourable
-"""
-
-    # =====================
-    # TOMORROW OUTLOOK
-    # =====================
-
-    pred_low = int(avg_price * 0.99)
-    pred_high = int(avg_price * 1.02)
-
-    tomorrow_outlook = f"""
-Expected Avg Price:
-
-₹{pred_low:,} - ₹{pred_high:,}
-
-Market Sentiment:
-
-{market_outlook}
-"""
-
-    # =====================
-    # FORECAST
-    # =====================
-
-    forecast_text = ""
-    rain_alerts = []
-
-    best_spray_day = None
-    lowest_rain = 999
-
-    for i in range(1, 5):
-
-        weather_date = daily["time"][i]
-
-        max_t = daily["temperature_2m_max"][i]
-        min_t = daily["temperature_2m_min"][i]
-        rain_f = daily["precipitation_sum"][i]
-
-        short_date = (
-            weather_date[8:10]
-            + "-"
-            + weather_date[5:7]
-        )
-
-        forecast_text += f"""
-📅 {short_date}
-🌡️ {min_t}°C - {max_t}°C
-🌧️ {rain_f} mm
-
-"""
-
-        if rain_f > 0:
-            rain_alerts.append(
-                f"🌧️ {short_date} ({rain_f} mm)"
-            )
-
-        if rain_f < lowest_rain:
-            lowest_rain = rain_f
-            best_spray_day = short_date
-
-    rain_summary = (
-        "\n".join(rain_alerts)
-        if rain_alerts
-        else "✅ No rainfall expected."
-    )
-
-    heavy_rain_days = []
-
-    for i in range(1, 5):
-
-        rainfall = daily["precipitation_sum"][i]
-
-        if rainfall >= 15:
-
-            heavy_rain_days.append(
-                daily["time"][i][8:10]
-                + "-"
-                + daily["time"][i][5:7]
-            )
-
-    heavy_rain_text = (
-        "\n".join(heavy_rain_days)
-        if heavy_rain_days
-        else "None"
-    )
-
-    # =====================
     # MESSAGE
     # =====================
 
     message = f"""
 🌿 CardoEla Daily Intelligence Report
 
-📅 {row1[3]}
+📅 {auction_date}
 
 ━━━━━━━━━━━━━━━━
 
 💹 CARDAMOM MARKET
 
 🏢 Auction Centre 1
-📦 Arrived Qty : {row1[4]} Kg
-✅ Sold Qty : {row1[5]} Kg
-💰 Avg Price : ₹{row1[8]}/Kg
-🚀 Max Price : ₹{row1[6]}/Kg
+📦 Arrived Qty : {row1.iloc[4]}
+✅ Sold Qty : {row1.iloc[5]}
+💰 Avg Price : ₹{row1.iloc[8]}/Kg
+🚀 Max Price : ₹{row1.iloc[6]}/Kg
 
 ━━━━━━━━━━━━━━━━
 
 🏢 Auction Centre 2
-📦 Arrived Qty : {row2[4]} Kg
-✅ Sold Qty : {row2[5]} Kg
-💰 Avg Price : ₹{row2[8]}/Kg
-🚀 Max Price : ₹{row2[6]}/Kg
+📦 Arrived Qty : {row2.iloc[4]}
+✅ Sold Qty : {row2.iloc[5]}
+💰 Avg Price : ₹{row2.iloc[8]}/Kg
+🚀 Max Price : ₹{row2.iloc[6]}/Kg
 
 ━━━━━━━━━━━━━━━━
 
 🌦️ VELLIMALA WEATHER
-📍 Udumbanchola, Idukki
 
 🌡️ Current Temp : {temp}°C
 💧 Humidity : {humidity}%
@@ -307,72 +182,12 @@ Today's Forecast
 
 ━━━━━━━━━━━━━━━━
 
-📆 4-DAY FORECAST
-
-{forecast_text}
-
-━━━━━━━━━━━━━━━━
-
-☔ RAIN ALERTS
-
-{rain_summary}
-
-⚠️ Heavy Rain Expected On:
-
-{heavy_rain_text}
-
-━━━━━━━━━━━━━━━━
-
-🚜 SPRAY ADVISORY
-
-✅ Best Spray Day:
-
-{best_spray_day}
-
-Reason:
-• Lowest rainfall forecast
-• Better field accessibility
-• Suitable field conditions
-
-━━━━━━━━━━━━━━━━
-
 📈 PRICE TREND
 
 {price_trend_text}
 
 Market Outlook:
 {market_outlook}
-
-━━━━━━━━━━━━━━━━
-
-🦠 DISEASE RISK
-
-Capsule Rot Risk:
-{disease_risk}
-
-Reasons:
-{disease_reason}
-
-━━━━━━━━━━━━━━━━
-
-🎯 PRICE ALERT
-
-{price_alert}
-
-━━━━━━━━━━━━━━━━
-
-📊 WEEKLY TREND
-
-{weekly_text}
-
-Weekly Gain:
-₹{weekly_gain:,.0f}
-
-━━━━━━━━━━━━━━━━
-
-🔮 TOMORROW OUTLOOK
-
-{tomorrow_outlook}
 
 ━━━━━━━━━━━━━━━━
 
@@ -383,16 +198,27 @@ Weekly Gain:
 
 except Exception as e:
 
+    print(traceback.format_exc())
+
     message = f"""
 ⚠️ CardoEla Alert
 
 Failed to generate today's report.
 
+Error Type:
+{type(e).__name__}
+
 Error:
 {str(e)}
 """
 
-telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+# =====================
+# TELEGRAM
+# =====================
+
+telegram_url = (
+    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+)
 
 requests.post(
     telegram_url,
