@@ -20,32 +20,32 @@ try:
     if len(tables) == 0:
         raise Exception("No tables found")
 
-    small_table = tables[1]
-
-row1 = small_table.iloc[2]
-row2 = small_table.iloc[3]
-
-auction_date = str(row1.iloc[1])
-
-auction1_arrived = float(row1.iloc[4])
-auction1_sold = float(row1.iloc[5])
-auction1_max = float(row1.iloc[6])
-auction1_min = float(row1.iloc[7])
-auction1_avg = float(row1.iloc[8])
-
-auction2_arrived = float(row2.iloc[4])
-auction2_sold = float(row2.iloc[5])
-auction2_max = float(row2.iloc[6])
-auction2_min = float(row2.iloc[7])
-auction2_avg = float(row2.iloc[8])
-
-avg_price = auction1_avg
-
-print("Auction Row 1")
-print(row1.tolist())
-
-print("Auction Row 2")
-print(row2.tolist())
+        small_table = tables[1]
+    
+    row1 = small_table.iloc[2]
+    row2 = small_table.iloc[3]
+    
+    auction_date = str(row1.iloc[1])
+    
+    auction1_arrived = float(row1.iloc[4])
+    auction1_sold = float(row1.iloc[5])
+    auction1_max = float(row1.iloc[6])
+    auction1_min = float(row1.iloc[7])
+    auction1_avg = float(row1.iloc[8])
+    
+    auction2_arrived = float(row2.iloc[4])
+    auction2_sold = float(row2.iloc[5])
+    auction2_max = float(row2.iloc[6])
+    auction2_min = float(row2.iloc[7])
+    auction2_avg = float(row2.iloc[8])
+    
+    avg_price = auction1_avg
+    
+    print("Auction Row 1")
+    print(row1.tolist())
+    
+    print("Auction Row 2")
+    print(row2.tolist())
 # =====================
     # WEATHER
     # =====================
