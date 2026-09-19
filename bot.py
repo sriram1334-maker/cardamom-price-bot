@@ -150,8 +150,21 @@ try:
     # =====================
     # MESSAGE
     # =====================
+    def format_auction(row, centre):
+    return f"""
+🏢 {centre}
 
-    message = f"""
+📅 Date: {row.iloc[1]}
+🏛️ Auctioneer: {row.iloc[2]}
+
+📦 Lots: {row.iloc[3]}
+⚖️ Arrived Qty: {row.iloc[4]}
+✅ Sold Qty: {row.iloc[5]}
+
+📈 Max Price: ₹{row.iloc[6]}
+📉 Min Price: ₹{row.iloc[7]}
+📊 Avg Price: ₹{row.iloc[8]}
+"""message = f"""
 🌿 CardoEla Daily Intelligence Report
 
 📅 {auction_date}
@@ -160,21 +173,17 @@ try:
 
 💹 CARDAMOM MARKET
 
-🏢 Auction Centre 1
-
-{row1.to_string()}
+{format_auction(row1, "Auction Centre 1")}
 
 ━━━━━━━━━━━━━━━━
 
-🏢 Auction Centre 2
-
-{row2.to_string()}
+{format_auction(row2, "Auction Centre 2")}
 
 ━━━━━━━━━━━━━━━━
 
-💰 Average Price
+💰 Market Average Price
 
-₹{avg_price:,.0f}/Kg
+₹{avg_price:,.2f}/Kg
 
 ━━━━━━━━━━━━━━━━
 
@@ -190,7 +199,6 @@ try:
 • Spices Board India
 • Open-Meteo
 """
-
 except Exception as e:
 
     print(traceback.format_exc())
