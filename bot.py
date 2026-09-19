@@ -106,15 +106,15 @@ try:
     # =====================
     # MESSAGE
     # =====================
- def format_auction(row, centre):
+      def format_auction(row, centre):
 
-    arrived = float(row.iloc[4])
-    sold = float(row.iloc[5])
-    max_price = float(row.iloc[6])
-    min_price = float(row.iloc[7])
-    avg_price_row = float(row.iloc[8])
+        arrived = float(row.iloc[4])
+        sold = float(row.iloc[5])
+        max_price = float(row.iloc[6])
+        min_price = float(row.iloc[7])
+        avg_price_row = float(row.iloc[8])
 
-    return f"""
+        return f"""
 🏢 {centre}
 
 ⚖️ Arrived Qty : {arrived:,.1f} Kg
@@ -123,6 +123,22 @@ try:
 📈 Max Price : ₹{max_price:,.0f}/Kg
 📉 Min Price : ₹{min_price:,.0f}/Kg
 📊 Avg Price : ₹{avg_price_row:,.0f}/Kg
+"""
+
+    message = f"""
+🌿 CardoEla Daily Intelligence Report
+
+📅 {auction_date}
+
+━━━━━━━━━━━━━━━━
+
+💹 CARDAMOM MARKET
+
+{format_auction(row1, "Auction Centre 1")}
+
+━━━━━━━━━━━━━━━━
+
+{format_auction(row2, "Auction Centre 2")}
 """
 🌿 CardoEla Daily Intelligence Report
 
