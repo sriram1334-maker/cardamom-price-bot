@@ -106,7 +106,7 @@ try:
     # =====================
     # MESSAGE
     # =====================
-      def format_auction(row, centre):
+    def format_auction(row, centre):
 
         arrived = float(row.iloc[4])
         sold = float(row.iloc[5])
