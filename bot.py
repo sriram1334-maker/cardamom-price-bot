@@ -12,7 +12,7 @@ SPICES_URL = "https://www.indianspices.com/marketing/price/domestic/daily-price.
 try:
 
     # =====================
-    # CARDAMOM AUCTION DATA
+    # AUCTION DATA
     # =====================
 
     tables = pd.read_html(SPICES_URL)
@@ -59,6 +59,12 @@ try:
 
     today = str(date.today())
 
+    if not history_df.empty:
+        history_df["avg_price"] = pd.to_numeric(
+            history_df["avg_price"],
+            errors="coerce"
+        )
+
     if not (history_df["date"] == today).any():
 
         history_df.loc[len(history_df)] = [
@@ -72,7 +78,44 @@ try:
         )
 
     # =====================
-    # MESSAGE
+    # WEEKLY TREND
+    # =====================
+
+    history_df["avg_price"] = pd.to_numeric(
+        history_df["avg_price"],
+        errors="coerce"
+    )
+
+    last_7_days = history_df.tail(7)
+
+    weekly_trend = ""
+
+    for _, r in last_7_days.iterrows():
+
+        weekly_trend += (
+            f"{r['date']} : ₹{r['avg_price']:,.0f}\n"
+        )
+
+    if len(last_7_days) >= 2:
+
+        weekly_gain = (
+            last_7_days.iloc[-1]["avg_price"]
+            - last_7_days.iloc[0]["avg_price"]
+        )
+
+    else:
+
+        weekly_gain = 0
+
+    if weekly_gain > 50:
+        sentiment = "📈 Bullish"
+    elif weekly_gain < -50:
+        sentiment = "📉 Bearish"
+    else:
+        sentiment = "➡️ Stable"
+
+    # =====================
+    # FORMAT AUCTION
     # =====================
 
     def format_auction(row, centre):
@@ -93,6 +136,10 @@ try:
 📉 Min Price : ₹{min_price:,.0f}/Kg
 📊 Avg Price : ₹{avg_price_row:,.0f}/Kg
 """
+
+    # =====================
+    # MESSAGE
+    # =====================
 
     message = f"""
 🌿 CardoEla Daily Intelligence Report
@@ -122,6 +169,18 @@ try:
 🌡️ Temperature : {temp}°C
 💧 Humidity : {humidity}%
 ☔ Rain : {rain} mm
+
+━━━━━━━━━━━━━━━━
+
+📊 WEEKLY TREND
+
+{weekly_trend}
+
+Weekly Gain :
+₹{weekly_gain:,.0f}
+
+Market Sentiment :
+{sentiment}
 
 ━━━━━━━━━━━━━━━━
 
