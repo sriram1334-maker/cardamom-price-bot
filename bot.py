@@ -17,36 +17,16 @@ try:
 
     tables = pd.read_html(SPICES_URL)
 
-    if len(tables) == 0:
-        raise Exception("No tables found")
+    small_table = tables[1]
 
-        small_table = tables[1]
-    
     row1 = small_table.iloc[2]
     row2 = small_table.iloc[3]
-    
+
     auction_date = str(row1.iloc[1])
-    
-    auction1_arrived = float(row1.iloc[4])
-    auction1_sold = float(row1.iloc[5])
-    auction1_max = float(row1.iloc[6])
-    auction1_min = float(row1.iloc[7])
-    auction1_avg = float(row1.iloc[8])
-    
-    auction2_arrived = float(row2.iloc[4])
-    auction2_sold = float(row2.iloc[5])
-    auction2_max = float(row2.iloc[6])
-    auction2_min = float(row2.iloc[7])
-    auction2_avg = float(row2.iloc[8])
-    
-    avg_price = auction1_avg
-    
-    print("Auction Row 1")
-    print(row1.tolist())
-    
-    print("Auction Row 2")
-    print(row2.tolist())
-# =====================
+
+    avg_price = float(row1.iloc[8])
+
+    # =====================
     # WEATHER
     # =====================
 
@@ -55,8 +35,6 @@ try:
         "?latitude=9.85"
         "&longitude=77.15"
         "&current=temperature_2m,relative_humidity_2m,rain"
-        "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
-        "&forecast_days=5"
         "&timezone=Asia/Kolkata"
     )
 
@@ -73,23 +51,13 @@ try:
     # =====================
 
     try:
-
         history_df = pd.read_csv("price_history.csv")
-
     except:
-
         history_df = pd.DataFrame(
             columns=["date", "avg_price"]
         )
 
     today = str(date.today())
-
-    if not history_df.empty:
-
-        history_df["avg_price"] = pd.to_numeric(
-            history_df["avg_price"],
-            errors="coerce"
-        )
 
     if not (history_df["date"] == today).any():
 
@@ -106,6 +74,7 @@ try:
     # =====================
     # MESSAGE
     # =====================
+
     def format_auction(row, centre):
 
         arrived = float(row.iloc[4])
@@ -126,20 +95,6 @@ try:
 """
 
     message = f"""
-🌿 CardoEla Daily Intelligence Report
-
-📅 {auction_date}
-
-━━━━━━━━━━━━━━━━
-
-💹 CARDAMOM MARKET
-
-{format_auction(row1, "Auction Centre 1")}
-
-━━━━━━━━━━━━━━━━
-
-{format_auction(row2, "Auction Centre 2")}
-"""
 🌿 CardoEla Daily Intelligence Report
 
 📅 {auction_date}
@@ -174,6 +129,7 @@ try:
 • Spices Board India
 • Open-Meteo
 """
+
 except Exception as e:
 
     print(traceback.format_exc())
@@ -190,9 +146,7 @@ Error:
 {str(e)}
 """
 
-telegram_url = (
-    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-)
+telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 requests.post(
     telegram_url,
