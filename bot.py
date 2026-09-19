@@ -33,9 +33,7 @@ try:
             for col in range(len(row)):
 
                 try:
-
                     value = str(row.iloc[col])
-
                     value = value.replace(",", "").replace("₹", "").strip()
 
                     price = float(value)
@@ -54,28 +52,27 @@ try:
             break
 
     if len(auction_rows) < 2:
-        raise Exception(
-            "Could not find auction rows in Spices Board table"
-        )
+        raise Exception("Could not find auction rows in Spices Board table")
 
     row1 = auction_rows[0]
     row2 = auction_rows[1]
 
     print("Auction Row 1")
-    print(row1)
+    print(row1.tolist())
 
     print("Auction Row 2")
-    print(row2)
+    print(row2.tolist())
 
-    # Adjust if website structure changes
+    # =====================
+    # GET AVG PRICE
+    # =====================
+
     avg_price = None
 
     for value in row1:
 
         try:
-
             temp = str(value).replace(",", "").replace("₹", "").strip()
-
             number = float(temp)
 
             if number > 500:
@@ -99,8 +96,6 @@ try:
         "?latitude=9.85"
         "&longitude=77.15"
         "&current=temperature_2m,relative_humidity_2m,rain"
-        "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
-        "&forecast_days=5"
         "&timezone=Asia/Kolkata"
     )
 
@@ -117,11 +112,9 @@ try:
     # =====================
 
     try:
-
         history_df = pd.read_csv("price_history.csv")
 
     except:
-
         history_df = pd.DataFrame(
             columns=["date", "avg_price"]
         )
@@ -148,57 +141,66 @@ try:
         )
 
     # =====================
-    # MESSAGE
+    # FORMAT AUCTION DATA
     # =====================
+
     def format_auction(row, centre):
-    return f"""
+
+        return f"""
 🏢 {centre}
 
 📅 Date: {row.iloc[1]}
 🏛️ Auctioneer: {row.iloc[2]}
 
 📦 Lots: {row.iloc[3]}
-⚖️ Arrived Qty: {row.iloc[4]}
-✅ Sold Qty: {row.iloc[5]}
+⚖️ Arrived Qty: {float(row.iloc[4]):,.1f} Kg
+✅ Sold Qty: {float(row.iloc[5]):,.1f} Kg
 
-📈 Max Price: ₹{row.iloc[6]}
-📉 Min Price: ₹{row.iloc[7]}
-📊 Avg Price: ₹{row.iloc[8]}
-"""message = f"""
+📈 Max Price: ₹{float(row.iloc[6]):,.2f}
+📉 Min Price: ₹{float(row.iloc[7]):,.2f}
+📊 Avg Price: ₹{float(row.iloc[8]):,.2f}
+"""
+
+    # =====================
+    # TELEGRAM MESSAGE
+    # =====================
+
+    message = f"""
 🌿 CardoEla Daily Intelligence Report
 
 📅 {auction_date}
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💹 CARDAMOM MARKET
 
 {format_auction(row1, "Auction Centre 1")}
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 {format_auction(row2, "Auction Centre 2")}
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-💰 Market Average Price
+💰 MARKET PRICE
 
 ₹{avg_price:,.2f}/Kg
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 🌦️ WEATHER
 
-🌡️ Temperature : {temp}°C
-💧 Humidity : {humidity}%
-☔ Rain : {rain} mm
+🌡️ Temperature: {temp}°C
+💧 Humidity: {humidity}%
+☔ Rain: {rain} mm
 
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 📍 Sources
 • Spices Board India
 • Open-Meteo
 """
+
 except Exception as e:
 
     print(traceback.format_exc())
@@ -215,9 +217,13 @@ Error:
 {str(e)}
 """
 
-telegram_url = (
-    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-)
+# =====================
+# SEND TELEGRAM MESSAGE
+# =====================
+
+telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+print(message)
 
 requests.post(
     telegram_url,
